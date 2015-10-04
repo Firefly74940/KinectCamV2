@@ -864,7 +864,7 @@ namespace KinectCam
 
             if (!KinectCamSettigns.Default.Desktop)
             {
-                KinectHelper.GenerateFrame(_ptr, length, KinectCamSettigns.Default.Mirrored);
+                KinectHelper.GenerateFrame(_ptr, length, KinectCamSettigns.Default.Mirrored,KinectCamSettigns.Default.Zoom);
             }
             else
             {

@@ -35,5 +35,10 @@ namespace KinectCam
         {
             KinectCamSettigns.Default.Desktop = cbDesktop.Checked;
         }
-    }
+
+		private void cbZoom_CheckedChanged(object sender, EventArgs e)
+		{
+			KinectCamSettigns.Default.Zoom = cbZoom.Checked;
+		}
+	}
 }

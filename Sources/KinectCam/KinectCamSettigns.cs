@@ -19,10 +19,16 @@
         public bool Mirrored
         {
             get;
-            set;
-        }
+			set;
+		}
 
-        public bool Desktop
+		public bool Zoom
+		{
+			get;
+			set;
+		}
+
+		public bool Desktop
         {
             get;
             set;
