@@ -1,5 +1,5 @@
 @c:
-@cd c:\KinectCamV2\
+@cd c:\KinectCamV21\
 
 @c:\Windows\Microsoft.NET\Framework\v4.0.30319\RegAsm.exe /unregister /nologo BaseClassesNET.dll
 @c:\Windows\Microsoft.NET\Framework\v4.0.30319\RegAsm.exe /unregister /nologo KinectCam.dll
