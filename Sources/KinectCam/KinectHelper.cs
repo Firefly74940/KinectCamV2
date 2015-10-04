@@ -17,13 +17,13 @@ namespace KinectCam
 			private ToolStripMenuItem MirroredMenuItem;
 			private ToolStripMenuItem DesktopMenuItem;
 			private ToolStripMenuItem ZoomMenuItem;
-
+			private ToolStripMenuItem TrackHeadMenuItem;
 			public KinectCamApplicationContext()
 			{
 				Application.ApplicationExit += new EventHandler(this.OnApplicationExit);
 				InitializeComponent();
 				TrayIcon.Visible = true;
-				TrayIcon.ShowBalloonTip(30000);
+				//TrayIcon.ShowBalloonTip(30000);
 			}
 
 			private void InitializeComponent()
@@ -44,6 +44,7 @@ namespace KinectCam
 				MirroredMenuItem = new ToolStripMenuItem();
 				DesktopMenuItem = new ToolStripMenuItem();
 				ZoomMenuItem = new ToolStripMenuItem();
+				TrackHeadMenuItem = new ToolStripMenuItem();
 				TrayIconContextMenu.SuspendLayout();
 
 				// 
@@ -52,7 +53,8 @@ namespace KinectCam
 				this.TrayIconContextMenu.Items.AddRange(new ToolStripItem[] {
 				this.MirroredMenuItem,
 				this.DesktopMenuItem,
-				this.ZoomMenuItem
+				this.ZoomMenuItem,
+				this.TrackHeadMenuItem
 				});
 				this.TrayIconContextMenu.Name = "TrayIconContextMenu";
 				this.TrayIconContextMenu.Size = new Size(153, 70);
@@ -79,6 +81,14 @@ namespace KinectCam
 				this.ZoomMenuItem.Size = new Size(152, 22);
 				this.ZoomMenuItem.Text = "Zoom";
 				this.ZoomMenuItem.Click += new EventHandler(this.ZoomMenuItem_Click);
+
+				// 
+				// ZoomMenuItem
+				//
+				this.TrackHeadMenuItem.Name = "TrackHead";
+				this.TrackHeadMenuItem.Size = new Size(152, 22);
+				this.TrackHeadMenuItem.Text = "TrackHead";
+				this.TrackHeadMenuItem.Click += new EventHandler(this.TrackHeadMenuItem_Click);
 
 				TrayIconContextMenu.ResumeLayout(false);
 				TrayIcon.ContextMenuStrip = TrayIconContextMenu;
@@ -109,6 +119,10 @@ namespace KinectCam
 				KinectCamSettigns.Default.Zoom = !KinectCamSettigns.Default.Zoom;
 			}
 
+			private void TrackHeadMenuItem_Click(object sender, EventArgs e)
+			{
+				KinectCamSettigns.Default.TrackHead = !KinectCamSettigns.Default.TrackHead;
+			}
 			public void Exit()
 			{
 				TrayIcon.Visible = false;
@@ -130,9 +144,8 @@ namespace KinectCam
 				sensor = KinectSensor.GetDefault();
 				if (sensor == null) return;
 
-				var reader = sensor.ColorFrameSource.OpenReader();
-				reader.FrameArrived += reader_FrameArrived;
-
+				var reader = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Color | FrameSourceTypes.Body); //ColorFrameSource.OpenReader();
+				reader.MultiSourceFrameArrived += reader_FrameArrived;
 				sensor.Open();
 
 				Sensor = sensor;
@@ -168,15 +181,87 @@ namespace KinectCam
 
 		public delegate void InvokeDelegate();
 
-		static void reader_FrameArrived(object sender, ColorFrameArrivedEventArgs e)
+		static void reader_FrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
 		{
-			using (var colorFrame = e.FrameReference.AcquireFrame())
+			var reference = e.FrameReference.AcquireFrame();
+			using (var colorFrame = reference.ColorFrameReference.AcquireFrame())
 			{
 				if (colorFrame != null)
 				{
 					ColorFrameReady(colorFrame);
 				}
 			}
+			using (var bodyFrame = reference.BodyFrameReference.AcquireFrame())
+			{
+				if (bodyFrame != null)
+				{
+					var _bodies = new Body[bodyFrame.BodyFrameSource.BodyCount];
+
+					bodyFrame.GetAndRefreshBodyData(_bodies);
+					_headFound = false;
+					foreach (var body in _bodies)
+					{
+						if (body.IsTracked)
+						{
+							Joint head = body.Joints[JointType.Head];
+
+							if (head.TrackingState == TrackingState.NotTracked)
+								continue;
+							_headFound = true;
+							_headPosition = Sensor.CoordinateMapper.MapCameraPointToColorSpace(head.Position);
+
+						}
+					}
+					UpdateZoomPosition();
+				}
+			}
+		}
+		static int SmoothTransitionByStep(int current, int needed, int step = 4)
+		{
+
+			if (step == 0)
+			{
+				return needed;
+			}
+			if (current > needed)
+			{
+				current -= step;
+				if (current < needed)
+					current = needed;
+			}
+			else if (current < needed)
+			{
+				current += step;
+				if (current > needed)
+					current = needed;
+			}
+			return current;
+		}
+		private static void UpdateZoomPosition()
+		{
+			// we should be at 30 fps in this place as Kinect Body are at 30 fps 
+			int NeededZoomedWidthStart = 0;
+			int NeededZoomedHeightStart;
+			if (!KinectCamSettigns.Default.TrackHead || !_headFound)
+			{
+				NeededZoomedWidthStart = (SensorWidth - ZoomedWidth) / 2;
+				NeededZoomedHeightStart = (SensorHeight - ZoomedHeight) / 2;
+			}
+			else
+			{
+				NeededZoomedWidthStart = (int)Math.Min(MaxZoomedWidthStart, Math.Max(0, _headPosition.X - ZoomedWidth / 2));
+
+				NeededZoomedHeightStart = (int)Math.Min(MaxZoomedHeightStart, Math.Max(0, _headPosition.Y - ZoomedHeight / 2));
+			}
+
+			ZoomedWidthStart = SmoothTransitionByStep(ZoomedWidthStart, NeededZoomedWidthStart, 4);
+			ZoomedHeightStart = SmoothTransitionByStep(ZoomedHeightStart, NeededZoomedHeightStart, 4);
+
+			ZoomedWidthEnd = ZoomedWidthStart + ZoomedWidth;
+			ZoomedHeightEnd = ZoomedHeightStart + ZoomedHeight;
+			ZoomedPointerStart = ZoomedHeightStart * 1920 * 4 + ZoomedWidthStart * 4;
+			ZoomedPointerEnd = ZoomedHeightEnd * 1920 * 4 + ZoomedWidthEnd * 4;
+
 		}
 
 		static unsafe void ColorFrameReady(ColorFrame frame)
@@ -219,22 +304,32 @@ namespace KinectCam
 			}
 		}
 
+		static bool _headFound;
+		static ColorSpacePoint _headPosition;
+
 		public const int SensorWidth = 1920;
 		public const int SensorHeight = 1080;
 		public const int ZoomedWidth = 960;
 		public const int ZoomedHeight = 540;
-		public const int ZoomedWidthStart = ZoomedWidth/2;
-		public const int ZoomedHeightStart =ZoomedHeight/2;
-		public const int ZoomedWidthEnd = SensorWidth - ZoomedWidthStart;
-		public const int ZoomedHeightEnd = SensorHeight - ZoomedHeightStart;
 
-		public const int ZoomedPointerStart = ZoomedHeightStart * 1920 * 4 + ZoomedWidthStart * 4;
-		public const int ZoomedPointerEnd = ZoomedHeightEnd * 1920 * 4+ ZoomedWidthEnd * 4;
+		public const int DefaultZoomedWidthStart = (SensorWidth - ZoomedWidth) / 2;
+		public const int DefaultHeightStart = (SensorHeight - ZoomedHeight) / 2;
+
+		public const int MaxZoomedWidthStart = SensorWidth - ZoomedWidth ;
+		public const int MaxZoomedHeightStart = SensorHeight - (ZoomedHeight+1) ; // +1 to avoid overflow
+
+		public static int ZoomedWidthStart = (SensorWidth - ZoomedWidth) / 2;
+		public static int ZoomedHeightStart = (SensorHeight - ZoomedHeight) / 2;
+		public static int ZoomedWidthEnd = ZoomedWidthStart + ZoomedWidth;
+		public static int ZoomedHeightEnd = ZoomedHeightStart + ZoomedHeight;
+
+
+		public static int ZoomedPointerStart = ZoomedHeightStart * 1920 * 4 + ZoomedWidthStart * 4;
+		public static int ZoomedPointerEnd = ZoomedHeightEnd * 1920 * 4 + ZoomedWidthEnd * 4;
 		static readonly byte[] sensorColorFrameData = new byte[1920 * 1080 * 4];
 
 		public unsafe static void GenerateFrame(IntPtr _ptr, int length, bool mirrored, bool zoom)
 		{
-			zoom = true;
 			byte[] colorFrame = sensorColorFrameData;
 			void* camData = _ptr.ToPointer();
 
@@ -256,7 +351,7 @@ namespace KinectCam
 							byte* pData = (byte*)camData;
 							byte* sData = (byte*)sDataE;
 							bool redo = true;
-						
+
 							for (; sData > sDataB;)
 							{
 								for (var i = 0; i < width; ++i)
@@ -282,10 +377,10 @@ namespace KinectCam
 									}
 									else
 									{
-										sData -= ZoomedWidthStart * 2 * 4;
+										sData -= (SensorWidth - ZoomedWidth) * 4;
 									}
 									redo = !redo;
-									
+
 								}
 							}
 
@@ -307,7 +402,7 @@ namespace KinectCam
 							while (sData == (sDataBE = sData) &&
 								   sDataB <= (sData -= (width * 4 - 1)))
 							{
-								
+
 								r = sData;
 								do
 								{
@@ -334,7 +429,7 @@ namespace KinectCam
 									}
 									else
 									{
-										sData -= ZoomedWidthStart * 2 * 4;
+										sData -= (SensorWidth - ZoomedWidth) * 4;
 									}
 									redo = !redo;
 

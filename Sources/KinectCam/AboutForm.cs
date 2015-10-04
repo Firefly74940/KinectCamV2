@@ -24,7 +24,9 @@ namespace KinectCam
         {
             cbMirrored.Checked = KinectCamSettigns.Default.Mirrored;
             cbDesktop.Checked = KinectCamSettigns.Default.Desktop;
-        }
+			cbZoom.Checked = KinectCamSettigns.Default.Zoom;
+			cbTrackHead.Checked = KinectCamSettigns.Default.TrackHead;
+		}
 
         private void cbMirrored_CheckedChanged(object sender, EventArgs e)
         {
@@ -39,6 +41,11 @@ namespace KinectCam
 		private void cbZoom_CheckedChanged(object sender, EventArgs e)
 		{
 			KinectCamSettigns.Default.Zoom = cbZoom.Checked;
+		}
+
+		private void cbTrackHead_CheckedChanged(object sender, EventArgs e)
+		{
+			KinectCamSettigns.Default.TrackHead = cbTrackHead.Checked;
 		}
 	}
 }

@@ -27,7 +27,11 @@
 			get;
 			set;
 		}
-
+		public bool TrackHead
+		{
+			get;
+			set;
+		}
 		public bool Desktop
         {
             get;

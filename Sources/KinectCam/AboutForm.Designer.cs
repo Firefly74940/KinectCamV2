@@ -35,6 +35,7 @@
 			this.cbDesktop = new System.Windows.Forms.CheckBox();
 			this.gbOptions = new System.Windows.Forms.GroupBox();
 			this.cbZoom = new System.Windows.Forms.CheckBox();
+			this.cbTrackHead = new System.Windows.Forms.CheckBox();
 			this.gbAuthors.SuspendLayout();
 			this.gbOptions.SuspendLayout();
 			this.SuspendLayout();
@@ -99,6 +100,7 @@
 			// gbOptions
 			// 
 			this.gbOptions.Controls.Add(this.cbDesktop);
+			this.gbOptions.Controls.Add(this.cbTrackHead);
 			this.gbOptions.Controls.Add(this.cbZoom);
 			this.gbOptions.Controls.Add(this.cbMirrored);
 			this.gbOptions.Location = new System.Drawing.Point(12, 47);
@@ -118,6 +120,17 @@
 			this.cbZoom.Text = "Zoom";
 			this.cbZoom.UseVisualStyleBackColor = true;
 			this.cbZoom.CheckedChanged += new System.EventHandler(this.cbZoom_CheckedChanged);
+			// 
+			// cbTrackHead
+			// 
+			this.cbTrackHead.AutoSize = true;
+			this.cbTrackHead.Location = new System.Drawing.Point(76, 42);
+			this.cbTrackHead.Name = "cbTrackHead";
+			this.cbTrackHead.Size = new System.Drawing.Size(80, 17);
+			this.cbTrackHead.TabIndex = 5;
+			this.cbTrackHead.Text = "TrackHead";
+			this.cbTrackHead.UseVisualStyleBackColor = true;
+			this.cbTrackHead.CheckedChanged += new System.EventHandler(this.cbTrackHead_CheckedChanged);
 			// 
 			// AboutForm
 			// 
@@ -148,5 +161,6 @@
         private System.Windows.Forms.CheckBox cbDesktop;
         private System.Windows.Forms.GroupBox gbOptions;
 		private System.Windows.Forms.CheckBox cbZoom;
+		private System.Windows.Forms.CheckBox cbTrackHead;
 	}
 }
